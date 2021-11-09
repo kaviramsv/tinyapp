@@ -56,9 +56,14 @@ app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
   res.redirect(longURL);
 });
-//delete an entry in db object
+//Add route for deleting entries in db object
 app.post("/urls/:shortURL/delete",(req,res)=>{
   delete urlDatabase[req.params.shortURL];
+  res.redirect(`/urls`);
+});
+//Add route to update entries in db object
+app.post("/urls/:id",(req,res)=>{
+  urlDatabase[req.params.id]=req.body.newURL;
   res.redirect(`/urls`);
 });
 
