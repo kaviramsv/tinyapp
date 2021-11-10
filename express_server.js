@@ -1,12 +1,8 @@
 const express = require("express");
 const app = express();
 const PORT = 8080; 
-
-//generate a random string of 6 alphanumeric characters
-function generateRandomString(length) {
-  return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
-}
-
+const cookieParser = require('cookie-parser')
+const bodyParser = require("body-parser");
 //Set ejs as the view engine.
 app.set("view engine", "ejs");
 
@@ -16,8 +12,24 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+//generate a random string of 6 alphanumeric characters
+function generateRandomString(length) {
+  return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
+}
+//assign value to cookie when logging in
+app.post("/login", (req, res) => {
+  res.cookie('name', req.body.username);
+  //console.log(req.cookies["name"]); 
+  res.redirect("/urls");
+});
+//clear cookie when logged out
+app.post("/logout", (req, res) => {
+  res.clearCookie('name');
+  res.redirect("/urls");
+});
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -32,23 +44,24 @@ app.get("/hello", (req, res) => {
 });
 //route for listing all entries in db
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = { urls: urlDatabase  , username: req.cookies["name"],};
   res.render("urls_index", templateVars);
 });
 //route for creating new entries 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = { username: req.cookies["name"]}
+  res.render("urls_new", templateVars);
 });
 //updating db via parsing the form details in the post method 
 app.post("/urls", (req, res) => {
   let short_url=generateRandomString(6);
   urlDatabase[short_url]=req.body.longURL;
-  console.log(urlDatabase);
+  // console.log(urlDatabase);
   res.redirect(`/urls/${short_url}`);
 });
 //render short url using params
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] ,username: req.cookies["name"]};
   res.render("urls_show", templateVars);
 });
 //redirect to long url via href in anchor tags in short_url(urls_show)
