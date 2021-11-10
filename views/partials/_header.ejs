@@ -11,10 +11,10 @@
       </ul>
 
       <ul class="navbar-nav ml-auto">
-        <% if(username){ %>
+        <% if(user){ %>
           <form class="d-flex" method="POST" action="/logout">
             <span  class="navbar-text " style="margin-right: 2em;color: black;">
-              Logged in As <%=username%>!
+              Logged in As <%=user.email%>!
             </span>            
             <button type="submit" class="btn btn-outline-dark">Logout</button>
           </form>
