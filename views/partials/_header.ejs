@@ -20,8 +20,14 @@
           </form>
         <% } else{ %> 
          <form class="d-flex" method="POST" action="/login">               
-           <input class="form-control " type="text" name="username" placeholder="Username" style="width: 250px;margin-right: 2em;">
-           <button type="submit" class="btn btn-outline-dark">Submit</button>
+           <!-- <input class="form-control " type="text" name="username" placeholder="Username" style="width: 250px;margin-right: 2em;">
+           <button type="submit" class="btn btn-outline-dark">Submit</button> -->
+           <li class="nav-item">
+            <a class="nav-link" href="/login">Login</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/register">Register</a>
+          </li>
          </form>
         <% } %>
       </ul>
