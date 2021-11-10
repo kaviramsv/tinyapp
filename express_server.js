@@ -35,12 +35,22 @@ const generateRandomString = (length) => {
 
 //Checking for an email in the users object
 const check_email_db = (form_mail) => {
+  const mail_pwd = {
+    mail: false,
+    pwd: '',
+    id: ''
+  }
   for (let user in users) {
     if (users[user].email === form_mail) {
-      return true;
+      mail_pwd["mail"] = true;
+      mail_pwd["pwd"] = users[user].password;
+      mail_pwd["id"] = users[user].id;
+      //return true;
+
     }
   }
-  return false;
+  return mail_pwd;
+  //return false;
 }
 
 app.get("/register", (req, res) => {
@@ -52,14 +62,15 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const form_email = req.body.email;
   const form_password = req.body.password;
-  console.log(req.body, form_email, form_password)
+  //console.log(req.body, form_email, form_password)
   if (!form_password || !form_email) {
     res.status(404).send("Pasword or email, or both is empty");
   } else {
     let db_check = check_email_db(form_email);
+    console.log(db_check.mail)
     //if new user resgister
     //elseif already exists = show "Already Registered'
-    if (!db_check) {
+    if (!db_check.mail) {
       const user_id = generateRandomString(6);
       users[user_id] = {
         id: user_id,
@@ -68,7 +79,6 @@ app.post("/register", (req, res) => {
       };
       res.cookie('user_id', user_id);
       res.redirect("/urls");
-      console.log("users",users)
     } else {
       res.status(404).send("Already Registered");
     }
@@ -77,13 +87,28 @@ app.post("/register", (req, res) => {
 app.get("/login", (req, res) => {
   const user = users[req.cookies["user_id"]];
   const templateVars = { user: user };
-  res.render("urls_login",templateVars);
+  res.render("urls_login", templateVars);
 });
 //assign value to cookie when logging in
 app.post("/login", (req, res) => {
-  res.cookie('user_id', req.body.username);
-  //console.log(req.cookies["name"]); 
-  res.redirect("/urls");
+  const form_email = req.body.email;
+  const form_password = req.body.password;
+  let db_obj = check_email_db(form_email);
+  console.log(db_obj.pwd);
+  console.log(form_email, form_password);
+  //mail doesnt exist
+  if (!db_obj.mail) {
+    res.status(403).send("the email doesnt exist");
+  } else {
+    //if mail exists:compare the passwords 
+    if (db_obj.pwd === form_password) {
+      res.cookie('user_id', db_obj.id);
+      res.redirect("/urls");
+    } else {
+      //if mail exist but pwd doesnt match
+      res.status(403).send("the pasword doesnt match");
+    }
+  }
 });
 //clear cookie when logged out
 app.post("/logout", (req, res) => {
