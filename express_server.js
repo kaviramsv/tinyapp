@@ -43,7 +43,6 @@ const check_email_db = (form_mail) => {
   return false;
 }
 
-
 app.get("/register", (req, res) => {
   const user = users[req.cookies["user_id"]];
   const templateVars = { user: user };
@@ -51,7 +50,6 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-
   const form_email = req.body.email;
   const form_password = req.body.password;
   console.log(req.body, form_email, form_password)
@@ -75,6 +73,11 @@ app.post("/register", (req, res) => {
       res.status(404).send("Already Registered");
     }
   }
+});
+app.get("/login", (req, res) => {
+  const user = users[req.cookies["user_id"]];
+  const templateVars = { user: user };
+  res.render("urls_login",templateVars);
 });
 //assign value to cookie when logging in
 app.post("/login", (req, res) => {
