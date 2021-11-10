@@ -12,6 +12,19 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+const users = { 
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+}
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -20,18 +33,31 @@ function generateRandomString(length) {
   return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
 }
 app.get("/register", (req, res) => {
-  const templateVars = {username: req.cookies["name"],};
+  const user=users[req.cookies["user_id"]];
+  const templateVars = {user:user};
   res.render("urls_register", templateVars);
+});
+
+app.post("/register", (req, res) => {
+  const user_id=generateRandomString(6);
+  users[user_id]={
+    id: user_id, 
+    email: req.body.email, 
+    password: req.body.password
+  }
+  res.cookie('user_id', user_id);
+  console.log(users);
+  res.redirect("/urls");
 });
 //assign value to cookie when logging in
 app.post("/login", (req, res) => {
-  res.cookie('name', req.body.username);
+  res.cookie('user_id', req.body.username);
   //console.log(req.cookies["name"]); 
   res.redirect("/urls");
 });
 //clear cookie when logged out
 app.post("/logout", (req, res) => {
-  res.clearCookie('name');
+  res.clearCookie('user_id');
   res.redirect("/urls");
 });
 
@@ -48,12 +74,16 @@ app.get("/hello", (req, res) => {
 });
 //route for listing all entries in db
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase  , username: req.cookies["name"],};
+//Lookup the user object in the users object using the user_id cookie value
+  const user=users[req.cookies["user_id"]];
+// Pass this user object to your templates via templateVars.
+  const templateVars = { urls: urlDatabase  , user:user };
   res.render("urls_index", templateVars);
 });
 //route for creating new entries 
 app.get("/urls/new", (req, res) => {
-  const templateVars = { username: req.cookies["name"]}
+  const user=users[req.cookies["user_id"]];
+  const templateVars = { user: user};
   res.render("urls_new", templateVars);
 });
 //updating db via parsing the form details in the post method 
@@ -65,7 +95,8 @@ app.post("/urls", (req, res) => {
 });
 //render short url using params
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] ,username: req.cookies["name"]};
+  const user=users[req.cookies["user_id"]];
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] ,user: user};
   res.render("urls_show", templateVars);
 });
 //redirect to long url via href in anchor tags in short_url(urls_show)
