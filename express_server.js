@@ -19,6 +19,10 @@ app.use(cookieParser());
 function generateRandomString(length) {
   return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
 }
+app.get("/register", (req, res) => {
+  const templateVars = {username: req.cookies["name"],};
+  res.render("urls_register", templateVars);
+});
 //assign value to cookie when logging in
 app.post("/login", (req, res) => {
   res.cookie('name', req.body.username);
