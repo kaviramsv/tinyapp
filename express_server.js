@@ -1,3 +1,4 @@
+const check_email_db = require('./helpers');
 const express = require("express");
 const app = express();
 const PORT = 8080;
@@ -48,22 +49,7 @@ const generateRandomString = (length) => {
   return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
 }
 
-//Checking for an email in the users object
-const check_email_db = (form_mail) => {
-  const mail_pwd = {
-    mail: false,
-    pwd: '',
-    id: ''
-  }
-  for (let user in users) {
-    if (users[user].email === form_mail) {
-      mail_pwd["mail"] = true;
-      mail_pwd["pwd"] = users[user].password;
-      mail_pwd["id"] = users[user].id;     
-    }
-  }
-  return mail_pwd; 
-}
+
 
 //list of urls for a particular id
 const urlsForUser=(id)=>{
@@ -87,7 +73,7 @@ app.post("/register", (req, res) => {
   if (!form_password || !form_email) {
     res.status(404).send("<h1>Password or email, or both is empty</h1>");
   } else {
-    let db_check = check_email_db(form_email);
+    let db_check = check_email_db(form_email,users);
     //if new user resgister
     //elseif already exists = show "Already Registered'
     if (!db_check.mail) {
@@ -101,7 +87,7 @@ app.post("/register", (req, res) => {
       req.session.user_id = user_id;
       res.redirect("/urls");
     } else {
-      res.status(404).send("<h1>Already Registered</h1>");
+      res.status(404).send("<h1>Already Registered,Please go to login screen</h1>");
     }
   }
 });
@@ -113,11 +99,11 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   const form_email = req.body.email;
   const form_password = req.body.password;
-  let db_obj = check_email_db(form_email);
+  let db_obj = check_email_db(form_email,users);
   
   //mail doesnt exist
   if (!db_obj.mail) {
-    res.status(403).send("<h1>the email doesnt exist</h1>");
+    res.status(403).send("<h1>Invalid email ,Please use a valid mail or register!!</h1>");
   } else {
     //if mail exists:compare the passwords db_obj.pwd === form_password 
     if (bcrypt.compareSync(form_password, db_obj.pwd)) {
@@ -161,7 +147,6 @@ app.get("/urls", (req, res) => {
         temp_db[key] = urlDatabase[key];
         
       }
-
   }//for
 
 // Pass this user object to your templates via templateVars.
