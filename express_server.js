@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const PORT = 8080;
+const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser')
 const bodyParser = require("body-parser");
 //Set ejs as the view engine.
@@ -30,13 +31,14 @@ const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "a"
+    password: "$2a$10$.wVYgYHuucd9D3DelnONjORll80Ow6ZYvPll/FxTv5iZsIBmjzcJO"
   },
   "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "b"
+    password: "$2a$10$3WLgJQQI/jXfRPBcrPX1.eYrNH3hXSU7jZ3Z46tU5R9NbwLba4yyq"
   }
+
 }
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -76,8 +78,7 @@ const urlsForUser=(id)=>{
   };
   
 app.get("/register", (req, res) => {
-  const user = users[req.cookies["user_id"]];
-  const templateVars = { user: user };
+  const templateVars = { user : null};
   res.render("urls_register", templateVars);
 });
 
@@ -94,11 +95,14 @@ app.post("/register", (req, res) => {
     //elseif already exists = show "Already Registered'
     if (!db_check.mail) {
       const user_id = generateRandomString(6);
+      const hashed = bcrypt.hashSync(form_password, 10);
+      console.log("hashed",hashed)
       users[user_id] = {
         id: user_id,
         email: form_email,
-        password: form_password
+        password: hashed
       };
+      // console.log(users);
       res.cookie('user_id', user_id);
       res.redirect("/urls");
     } else {
@@ -107,8 +111,7 @@ app.post("/register", (req, res) => {
   }
 });
 app.get("/login", (req, res) => {
-  const user = users[req.cookies["user_id"]];
-  const templateVars = { user: user };
+  const templateVars = { user: null };
   res.render("urls_login", templateVars);
 });
 //assign value to cookie when logging in
@@ -121,8 +124,12 @@ app.post("/login", (req, res) => {
   if (!db_obj.mail) {
     res.status(403).send("the email doesnt exist");
   } else {
-    //if mail exists:compare the passwords 
-    if (db_obj.pwd === form_password) {
+    //if mail exists:compare the passwords db_obj.pwd === form_password 
+
+    console.log(form_password,"+",db_obj.pwd);
+    console.log(bcrypt.compareSync(form_password, db_obj.pwd));
+    if (bcrypt.compareSync(form_password, db_obj.pwd)) {
+      console.log(form_password,"+",db_obj.pwd)
       res.cookie('user_id', db_obj.id);
       res.redirect("/urls");
     } else {
