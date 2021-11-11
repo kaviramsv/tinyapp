@@ -7,21 +7,35 @@ const bodyParser = require("body-parser");
 app.set("view engine", "ejs");
 
 //Db data={short url:long url}
+// const urlDatabase = {
+//   "b2xVn2": "http://www.lighthouselabs.ca",
+//   "9sm5xK": "http://www.google.com"
+// };
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "user2RandomID"
+  },
+  c6UTxQ: {
+    longURL: "https://www.ccc.ca",
+    userID: "user2RandomID"
+},
+  i3BoGr: {
+      longURL: "https://www.google.ca",
+      userID: "userRandomID"
+  }
 };
 
 const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: "a"
   },
   "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: "b"
   }
 }
 
@@ -44,15 +58,23 @@ const check_email_db = (form_mail) => {
     if (users[user].email === form_mail) {
       mail_pwd["mail"] = true;
       mail_pwd["pwd"] = users[user].password;
-      mail_pwd["id"] = users[user].id;
-      //return true;
-
+      mail_pwd["id"] = users[user].id;     
     }
   }
   return mail_pwd;
-  //return false;
+ 
 }
-
+//list of urls for a particular id
+const urlsForUser=(id)=>{
+  const list_shtUrl_for_id=[];
+  for(let key in urlDatabase){
+    if(urlDatabase[key].userID===id){
+      list_shtUrl_for_id.push(key);
+    }
+  }
+  return list_shtUrl_for_id;
+  };
+  
 app.get("/register", (req, res) => {
   const user = users[req.cookies["user_id"]];
   const templateVars = { user: user };
@@ -94,8 +116,7 @@ app.post("/login", (req, res) => {
   const form_email = req.body.email;
   const form_password = req.body.password;
   let db_obj = check_email_db(form_email);
-  console.log(db_obj.pwd);
-  console.log(form_email, form_password);
+  
   //mail doesnt exist
   if (!db_obj.mail) {
     res.status(403).send("the email doesnt exist");
@@ -113,7 +134,7 @@ app.post("/login", (req, res) => {
 //clear cookie when logged out
 app.post("/logout", (req, res) => {
   res.clearCookie('user_id');
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
 app.get("/", (req, res) => {
@@ -131,42 +152,90 @@ app.get("/hello", (req, res) => {
 app.get("/urls", (req, res) => {
   //Lookup the user object in the users object using the user_id cookie value
   const user = users[req.cookies["user_id"]];
-  // Pass this user object to your templates via templateVars.
-  const templateVars = { urls: urlDatabase, user: user };
+  if(!user){
+    res.status(403).send("<h1>Cannot view urls unless logged in</h1>");
+  }  
+  //pass only data relevant to ct obj id in cookie
+  const temp_db={};
+  for (key in urlDatabase){
+      if(urlDatabase[key].userID === req.cookies["user_id"] ){
+        temp_db[key] = urlDatabase[key];
+        
+      }
+
+  }//for
+
+// Pass this user object to your templates via templateVars.
+  const templateVars = { urls: temp_db, user: user };
   res.render("urls_index", templateVars);
 });
 //route for creating new entries 
 app.get("/urls/new", (req, res) => {
   const user = users[req.cookies["user_id"]];
   const templateVars = { user: user };
+  if(!user){
+    res.render("urls_login", templateVars);
+  }
   res.render("urls_new", templateVars);
 });
 //updating db via parsing the form details in the post method 
 app.post("/urls", (req, res) => {
+  const user = users[req.cookies["user_id"]];
+  if(!user){
+    res.status(403).send("canot create a new url without loging in");
+  }
   let short_url = generateRandomString(6);
-  urlDatabase[short_url] = req.body.longURL;
-  // console.log(urlDatabase);
+  // urlDatabase[short_url] = req.body.longURL;
+  urlDatabase[short_url] = {
+             longURL: req.body.longURL,
+             userID: req.cookies["user_id"]
+        }  
   res.redirect(`/urls/${short_url}`);
 });
+
 //render short url using params
 app.get("/urls/:shortURL", (req, res) => {
   const user = users[req.cookies["user_id"]];
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: user };
+  if(!user){
+    res.status(403).send("<h1>Cannot view a short url without logging in</h1>");
+  }
+  const  urls_list_belong=urlsForUser(req.cookies["user_id"]);
+  if(!urls_list_belong.includes(req.params.shortURL)){
+    res.status(403).send(`<h1>This ${req.params.shortURL} url do not belong to you!!</h1>`);
+  }  
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user };
   res.render("urls_show", templateVars);
 });
 //redirect to long url via href in anchor tags in short_url(urls_show)
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const user = users[req.cookies["user_id"]];
+  const sht_url_list=Object.keys(urlDatabase);
+  if(!sht_url_list.includes(req.params.shortURL)){
+    res.status(403).send(`<h1>This url:'${req.params.shortURL}' does not exist !</h1>`);
+  }  
+  // if(!user){
+  //   res.status(403).send(`<h1>Please log in to view the short url ${req.params.shortURL}</h1>`);
+  // }
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 //Add route for deleting entries in db object
 app.post("/urls/:shortURL/delete", (req, res) => {
+  const  urls_list_belong=urlsForUser(req.cookies["user_id"]);
+  if(!urls_list_belong.includes(req.params.shortURL)){
+    res.status(403).send(`u cant delete this url :${req.params.shortURL} ,since this do not belong to you`);
+  } 
   delete urlDatabase[req.params.shortURL];
   res.redirect(`/urls`);
 });
 //Add route to update entries in db object
 app.post("/urls/:id", (req, res) => {
-  urlDatabase[req.params.id] = req.body.newURL;
+  // urlDatabase[req.params.id] = req.body.newURL;
+  const  urls_list_belong=urlsForUser(req.cookies["user_id"]);
+  if(!urls_list_belong.includes(req.params.id)){
+    res.status(403).send(`u cant edit this url :${req.params.id},since it does not belong to you`);
+  }
+  urlDatabase[req.params.id].longURL = req.body.newURL;
   res.redirect(`/urls`);
 });
 
