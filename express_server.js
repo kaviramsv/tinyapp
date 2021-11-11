@@ -2,16 +2,11 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 const bcrypt = require('bcryptjs');
-const cookieParser = require('cookie-parser')
+const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
 //Set ejs as the view engine.
 app.set("view engine", "ejs");
 
-//Db data={short url:long url}
-// const urlDatabase = {
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com"
-// };
 const urlDatabase = {
   b6UTxQ: {
       longURL: "https://www.tsn.ca",
@@ -42,7 +37,11 @@ const users = {
 }
 
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2']
+}))
+
 
 //generate a random string of 6 alphanumeric characters
 const generateRandomString = (length) => {
@@ -63,9 +62,9 @@ const check_email_db = (form_mail) => {
       mail_pwd["id"] = users[user].id;     
     }
   }
-  return mail_pwd;
- 
+  return mail_pwd; 
 }
+
 //list of urls for a particular id
 const urlsForUser=(id)=>{
   const list_shtUrl_for_id=[];
@@ -85,28 +84,24 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   const form_email = req.body.email;
   const form_password = req.body.password;
-  //console.log(req.body, form_email, form_password)
   if (!form_password || !form_email) {
-    res.status(404).send("Pasword or email, or both is empty");
+    res.status(404).send("<h1>Password or email, or both is empty</h1>");
   } else {
     let db_check = check_email_db(form_email);
-    console.log(db_check.mail)
     //if new user resgister
     //elseif already exists = show "Already Registered'
     if (!db_check.mail) {
       const user_id = generateRandomString(6);
       const hashed = bcrypt.hashSync(form_password, 10);
-      console.log("hashed",hashed)
       users[user_id] = {
         id: user_id,
         email: form_email,
         password: hashed
       };
-      // console.log(users);
-      res.cookie('user_id', user_id);
+      req.session.user_id = user_id;
       res.redirect("/urls");
     } else {
-      res.status(404).send("Already Registered");
+      res.status(404).send("<h1>Already Registered</h1>");
     }
   }
 });
@@ -122,25 +117,22 @@ app.post("/login", (req, res) => {
   
   //mail doesnt exist
   if (!db_obj.mail) {
-    res.status(403).send("the email doesnt exist");
+    res.status(403).send("<h1>the email doesnt exist</h1>");
   } else {
     //if mail exists:compare the passwords db_obj.pwd === form_password 
-
-    console.log(form_password,"+",db_obj.pwd);
-    console.log(bcrypt.compareSync(form_password, db_obj.pwd));
     if (bcrypt.compareSync(form_password, db_obj.pwd)) {
-      console.log(form_password,"+",db_obj.pwd)
-      res.cookie('user_id', db_obj.id);
+      req.session.user_id = db_obj.id;
       res.redirect("/urls");
     } else {
       //if mail exist but pwd doesnt match
-      res.status(403).send("the pasword doesnt match");
+      res.status(403).send("<h1>The password doesnt match</h1>");
     }
   }
 });
 //clear cookie when logged out
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  //res.clearCookie('user_id');
+  req.session = null
   res.redirect("/login");
 });
 
@@ -158,14 +150,14 @@ app.get("/hello", (req, res) => {
 //route for listing all entries in db
 app.get("/urls", (req, res) => {
   //Lookup the user object in the users object using the user_id cookie value
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if(!user){
     res.status(403).send("<h1>Cannot view urls unless logged in</h1>");
   }  
   //pass only data relevant to ct obj id in cookie
   const temp_db={};
   for (key in urlDatabase){
-      if(urlDatabase[key].userID === req.cookies["user_id"] ){
+      if(urlDatabase[key].userID === req.session.user_id ){
         temp_db[key] = urlDatabase[key];
         
       }
@@ -178,7 +170,7 @@ app.get("/urls", (req, res) => {
 });
 //route for creating new entries 
 app.get("/urls/new", (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   const templateVars = { user: user };
   if(!user){
     res.render("urls_login", templateVars);
@@ -187,7 +179,7 @@ app.get("/urls/new", (req, res) => {
 });
 //updating db via parsing the form details in the post method 
 app.post("/urls", (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if(!user){
     res.status(403).send("canot create a new url without loging in");
   }
@@ -195,18 +187,18 @@ app.post("/urls", (req, res) => {
   // urlDatabase[short_url] = req.body.longURL;
   urlDatabase[short_url] = {
              longURL: req.body.longURL,
-             userID: req.cookies["user_id"]
+             userID: req.session.user_id
         }  
   res.redirect(`/urls/${short_url}`);
 });
 
 //render short url using params
 app.get("/urls/:shortURL", (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if(!user){
     res.status(403).send("<h1>Cannot view a short url without logging in</h1>");
   }
-  const  urls_list_belong=urlsForUser(req.cookies["user_id"]);
+  const  urls_list_belong=urlsForUser(req.session.user_id);
   if(!urls_list_belong.includes(req.params.shortURL)){
     res.status(403).send(`<h1>This ${req.params.shortURL} url do not belong to you!!</h1>`);
   }  
@@ -215,7 +207,7 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 //redirect to long url via href in anchor tags in short_url(urls_show)
 app.get("/u/:shortURL", (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   const sht_url_list=Object.keys(urlDatabase);
   if(!sht_url_list.includes(req.params.shortURL)){
     res.status(403).send(`<h1>This url:'${req.params.shortURL}' does not exist !</h1>`);
@@ -228,7 +220,7 @@ app.get("/u/:shortURL", (req, res) => {
 });
 //Add route for deleting entries in db object
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const  urls_list_belong=urlsForUser(req.cookies["user_id"]);
+  const  urls_list_belong=urlsForUser(req.session.user_id);
   if(!urls_list_belong.includes(req.params.shortURL)){
     res.status(403).send(`u cant delete this url :${req.params.shortURL} ,since this do not belong to you`);
   } 
@@ -238,7 +230,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 //Add route to update entries in db object
 app.post("/urls/:id", (req, res) => {
   // urlDatabase[req.params.id] = req.body.newURL;
-  const  urls_list_belong=urlsForUser(req.cookies["user_id"]);
+  const  urls_list_belong=urlsForUser(req.session.user_id);
   if(!urls_list_belong.includes(req.params.id)){
     res.status(403).send(`u cant edit this url :${req.params.id},since it does not belong to you`);
   }
