@@ -1,8 +1,7 @@
 //Checking for an email in the users_db
 const check_email_db = (form_mail,users_db) => {
-
   const mail_pwd = {
-    mail: false,
+    mail: false,//boolean returns true ifa match exist
     pwd: null,
     id: null
   }
@@ -14,7 +13,7 @@ const check_email_db = (form_mail,users_db) => {
     }
   }
   return mail_pwd; 
-}
 
+}
 
  module.exports = check_email_db;

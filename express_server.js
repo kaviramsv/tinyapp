@@ -43,13 +43,10 @@ app.use(cookieSession({
   keys: ['key1', 'key2']
 }))
 
-
 //generate a random string of 6 alphanumeric characters
 const generateRandomString = (length) => {
   return Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length))).toString(36).slice(1);
 }
-
-
 
 //list of urls for a particular id
 const urlsForUser=(id)=>{
@@ -63,7 +60,13 @@ const urlsForUser=(id)=>{
   };
   
 app.get("/register", (req, res) => {
-  const templateVars = { user : null};
+
+  const user = users[req.session.user_id];
+  const templateVars = { user: user };
+  if(user){
+    res.redirect("/urls");
+  }
+
   res.render("urls_register", templateVars);
 });
 
@@ -71,7 +74,7 @@ app.post("/register", (req, res) => {
   const form_email = req.body.email;
   const form_password = req.body.password;
   if (!form_password || !form_email) {
-    res.status(404).send("<h1>Password or email, or both is empty</h1>");
+    res.status(404).send("<h2>Password or email, or both is empty</h2>");
   } else {
     let db_check = check_email_db(form_email,users);
     //if new user resgister
@@ -87,12 +90,16 @@ app.post("/register", (req, res) => {
       req.session.user_id = user_id;
       res.redirect("/urls");
     } else {
-      res.status(404).send("<h1>Already Registered,Please go to login screen</h1>");
+      res.status(404).send("<h2>Already Registered,Please go to login screen</h2>");
     }
   }
 });
 app.get("/login", (req, res) => {
-  const templateVars = { user: null };
+  const user = users[req.session.user_id];
+  const templateVars = { user: user };
+  if(user){
+    res.redirect("/urls");
+  }
   res.render("urls_login", templateVars);
 });
 //assign value to cookie when logging in
@@ -103,7 +110,7 @@ app.post("/login", (req, res) => {
   
   //mail doesnt exist
   if (!db_obj.mail) {
-    res.status(403).send("<h1>Invalid email ,Please use a valid mail or register!!</h1>");
+    res.status(403).send("<h3>Invalid email ,Please use a valid mail or register!!</h3>");
   } else {
     //if mail exists:compare the passwords db_obj.pwd === form_password 
     if (bcrypt.compareSync(form_password, db_obj.pwd)) {
@@ -111,7 +118,7 @@ app.post("/login", (req, res) => {
       res.redirect("/urls");
     } else {
       //if mail exist but pwd doesnt match
-      res.status(403).send("<h1>The password doesnt match</h1>");
+      res.status(403).send("<h3>The password doesnt match</h3>");
     }
   }
 });
@@ -122,23 +129,24 @@ app.post("/logout", (req, res) => {
   res.redirect("/login");
 });
 
+
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  const user = users[req.session.user_id];
+  const templateVars = { user: user };
+  if(!user){
+    res.redirect("/login");
+  }
+  res.redirect("/urls");
+  
 });
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
 //route for listing all entries in db
 app.get("/urls", (req, res) => {
   //Lookup the user object in the users object using the user_id cookie value
   const user = users[req.session.user_id];
   if(!user){
-    res.status(403).send("<h1>Cannot view urls unless logged in</h1>");
+    res.status(403).send("<h3>Cannot view urls unless logged in</h3>");
   }  
   //pass only data relevant to ct obj id in cookie
   const temp_db={};
@@ -181,11 +189,11 @@ app.post("/urls", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const user = users[req.session.user_id];
   if(!user){
-    res.status(403).send("<h1>Cannot view a short url without logging in</h1>");
+    res.status(403).send("<h3>Cannot view a short url without logging in</h3>");
   }
   const  urls_list_belong=urlsForUser(req.session.user_id);
   if(!urls_list_belong.includes(req.params.shortURL)){
-    res.status(403).send(`<h1>This ${req.params.shortURL} url do not belong to you!!</h1>`);
+    res.status(403).send(`<h3>This ${req.params.shortURL} url does not belong to you or does not exist!!</h3>`);
   }  
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user };
   res.render("urls_show", templateVars);
@@ -195,7 +203,7 @@ app.get("/u/:shortURL", (req, res) => {
   const user = users[req.session.user_id];
   const sht_url_list=Object.keys(urlDatabase);
   if(!sht_url_list.includes(req.params.shortURL)){
-    res.status(403).send(`<h1>This url:'${req.params.shortURL}' does not exist !</h1>`);
+    res.status(403).send(`<h3>This url:'${req.params.shortURL}' does not exist !</h3>`);
   }  
   // if(!user){
   //   res.status(403).send(`<h1>Please log in to view the short url ${req.params.shortURL}</h1>`);
@@ -205,7 +213,15 @@ app.get("/u/:shortURL", (req, res) => {
 });
 //Add route for deleting entries in db object
 app.post("/urls/:shortURL/delete", (req, res) => {
+  
+  const user = users[req.session.user_id];
+  console.log("user",user,req.session.user_id);
   const  urls_list_belong=urlsForUser(req.session.user_id);
+   console.log("list",urls_list_belong);
+  if(!user){
+    res.status(403).send("<h3>Cannot delete a short url without logging in</h3>");
+  }
+  
   if(!urls_list_belong.includes(req.params.shortURL)){
     res.status(403).send(`u cant delete this url :${req.params.shortURL} ,since this do not belong to you`);
   } 
