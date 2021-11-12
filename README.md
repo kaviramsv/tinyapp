@@ -30,9 +30,9 @@ TinyApp is a full stack web application built with Node and Express that allows 
 - Start by registering in the Registeration page.
 - Use valid credentials to login to the application.
 - Once logged in ,you will be able to perform following actions for Urls that belong to you.
-         1.Create new Tiny Urls 
-         2.Update existing Long URL's
-         3.Delete Urls 
+         - Create new Tiny Urls 
+         - Update existing Long URL's
+         - Delete Urls 
 - Log out once the requirements are done.
 
 ## What happens behind the scenes
@@ -46,7 +46,7 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## How to test
 
--App uses Mocah and chai to test the helper functions
--Run npm test to test if the helper function retrieves data pertaining to the client
+- App uses Mocah and chai to test the helper functions
+- Run npm test to test if the helper function retrieves data pertaining to the client
 
   
