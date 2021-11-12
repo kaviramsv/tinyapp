@@ -26,6 +26,7 @@ TinyApp is a full stack web application built with Node and Express that allows 
 - You can run the development web server using npm start since it is defined in the test script.
 
 ## Functionalities of the App
+
 - Start by registering in the Registeration page.
 - Use valid credentials to login to the application.
 - Once logged in ,you will be able to perform following actions for Urls that belong to you.
@@ -35,11 +36,17 @@ TinyApp is a full stack web application built with Node and Express that allows 
 - Log out once the requirements are done.
 
 ## What happens behind the scenes
+
 - The application works by using a cookie to identify the logged in client 
-- Once registered login id is saved along with the hashed pasword.
-- For every login,app checks the database if that user is existent in database.
-- Displays the details of valid users 
-- Updates Reads and deletes information from database based on request of user.
+- Once registered login id is saved along with the hashed pasword into database.
+- For every login,app sets a cookie, checks the database if that user is existent in database
+- Displays the email id of curent user in the navigation bar
+- Updates Reads and deletes information from database based on request of user
 - Clears the cookie once logged out
+
+## How to test
+
+-App uses Mocah and chai to test the helper functions
+-Run npm test to test if the helper function retrieves data pertaining to the client
 
   
